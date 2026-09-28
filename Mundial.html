@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor Mundial ESP32</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 30px 15px;
+    }
+    h1 { margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .subtitle { opacity: 0.7; margin-bottom: 30px; font-size: 0.9em; }
+    .cards { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 25px 30px;
+      min-width: 200px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      transition: transform 0.3s;
+    }
+    .card:hover { transform: translateY(-5px); }
+    .icon { font-size: 2.5em; margin-bottom: 10px; }
+    .label { font-size: 0.9em; opacity: 0.85; }
+    .value { font-size: 2.2em; font-weight: bold; margin: 8px 0; }
+    .unit { font-size: 0.6em; opacity: 0.7; }
+    #status { margin-top: 25px; font-size: 0.85em; opacity: 0.7; }
+    .error { color: #ff6b6b; }
+    .ok { color: #2ecc71; }
+  </style>
+</head>
+<body>
+  <h1>🌍 Monitor Mundial de Sensores</h1>
+  <p class="subtitle">Datos en tiempo real desde cualquier parte del mundo</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="icon">🌡️</div>
+      <div class="label">Temperatura</div>
+      <div class="value"><span id="temp">--</span><span class="unit"> °C</span></div>
+    </div>
+    <div class="card">
+      <div class="icon">💧</div>
+      <div class="label">Humedad</div>
+      <div class="value"><span id="hum">--</span><span class="unit"> %</span></div>
+    </div>
+    <div class="card">
+      <div class="icon">📏</div>
+      <div class="label">Distancia</div>
+      <div class="value"><span id="dist">--</span><span class="unit"> cm</span></div>
+    </div>
+  </div>
+
+  <div id="status">Cargando datos...</div>
+
+  <script>
+    // ⚠️ CAMBIA ESTOS DOS VALORES POR LOS TUYOS DE THINGSPEAK
+    const CHANNEL_ID = 1234567;                  // ← Tu Channel ID
+    const READ_API_KEY = 'TU_READ_API_KEY';      // ← Tu Read API Key
+
+    async function actualizar() {
+      try {
+        // ThingSpeak devuelve el último valor de cada campo en JSON
+        const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=1&api_key=${READ_API_KEY}`;
+        const r = await fetch(url);
+        const data = await r.json();
+
+        if (data.feeds && data.feeds.length > 0) {
+          const ultimo = data.feeds[0];
+          document.getElementById('temp').textContent = parseFloat(ultimo.field1).toFixed(1);
+          document.getElementById('hum').textContent  = parseFloat(ultimo.field2).toFixed(1);
+          document.getElementById('dist').textContent = parseFloat(ultimo.field3).toFixed(1);
+
+          const fecha = new Date(ultimo.created_at);
+          document.getElementById('status').textContent = 
+            '✅ Última actualización: ' + fecha.toLocaleString();
+          document.getElementById('status').className = 'ok';
+        } else {
+          document.getElementById('status').textContent = '⏳ Esperando primeros datos...';
+          document.getElementById('status').className = '';
+        }
+      } catch(e) {
+        document.getElementById('status').textContent = '❌ Error al obtener datos';
+        document.getElementById('status').className = 'error';
+        console.error(e);
+      }
+    }
+
+    actualizar();
+    setInterval(actualizar, 15000); // cada 15 segundos
+  </script>
+</body>
+</html>
